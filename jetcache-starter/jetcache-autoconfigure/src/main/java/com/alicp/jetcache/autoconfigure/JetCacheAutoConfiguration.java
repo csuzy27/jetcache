@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 /**
  * Created on 2016/11/17.
  *
- * @author <a href="mailto:areyouok@gmail.com">huangli</a>
+ * @author huangli
  */
 @Configuration
 @ConditionalOnClass(GlobalCacheConfig.class)
@@ -73,7 +73,6 @@ public class JetCacheAutoConfiguration {
     @Bean(name = GLOBAL_CACHE_CONFIG_NAME)
     public GlobalCacheConfig globalCacheConfig(AutoConfigureBeans autoConfigureBeans, JetCacheProperties props) {
         GlobalCacheConfig _globalCacheConfig = new GlobalCacheConfig();
-        _globalCacheConfig = new GlobalCacheConfig();
         _globalCacheConfig.setHiddenPackages(props.getHiddenPackages());
         _globalCacheConfig.setStatIntervalMinutes(props.getStatIntervalMinutes());
         _globalCacheConfig.setAreaInCacheName(props.isAreaInCacheName());

@@ -9,6 +9,7 @@ import com.alicp.jetcache.event.CachePutEvent;
 import com.alicp.jetcache.event.CacheRemoveAllEvent;
 import com.alicp.jetcache.event.CacheRemoveEvent;
 import com.alicp.jetcache.external.AbstractExternalCache;
+import com.alicp.jetcache.support.JetCacheExecutor;
 import com.alicp.jetcache.support.SquashedLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,16 +19,18 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * Created on 2016/10/7.
  *
- * @author <a href="mailto:areyouok@gmail.com">huangli</a>
+ * @author huangli
  */
 public abstract class AbstractCache<K, V> implements Cache<K, V> {
 
@@ -36,13 +39,17 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
     private volatile ConcurrentHashMap<Object, LoaderLock> loaderMap;
 
     protected volatile boolean closed;
+    private static final ReentrantLock reentrantLock = new ReentrantLock();
 
     ConcurrentHashMap<Object, LoaderLock> initOrGetLoaderMap() {
         if (loaderMap == null) {
-            synchronized (this) {
+            reentrantLock.lock();
+            try {
                 if (loaderMap == null) {
                     loaderMap = new ConcurrentHashMap<>();
                 }
+            } finally {
+                reentrantLock.unlock();
             }
         }
         return loaderMap;
@@ -67,6 +74,19 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
     }
 
     public void notify(CacheEvent e) {
+        notify0(e);
+    }
+
+    private void notify(CacheResult r, CacheEvent e) {
+        CompletionStage<?> f = r.future();
+        if (f.toCompletableFuture().isDone()) {
+            notify0(e);
+        } else {
+            f.thenRunAsync(() -> notify0(e), JetCacheExecutor.defaultExecutor());
+        }
+    }
+
+    private void notify0(CacheEvent e) {
         List<CacheMonitor> monitors = config().getMonitors();
         for (CacheMonitor m : monitors) {
             m.afterOperation(e);
@@ -82,10 +102,8 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else {
             result = do_GET(key);
         }
-        result.future().thenRun(() -> {
-            CacheGetEvent event = new CacheGetEvent(this, System.currentTimeMillis() - t, key, result);
-            notify(event);
-        });
+        CacheGetEvent event = new CacheGetEvent(this, System.currentTimeMillis() - t, key, result);
+        notify(result, event);
         return result;
     }
 
@@ -100,10 +118,8 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else {
             result = do_GET_ALL(keys);
         }
-        result.future().thenRun(() -> {
-            CacheGetAllEvent event = new CacheGetAllEvent(this, System.currentTimeMillis() - t, keys, result);
-            notify(event);
-        });
+        CacheGetAllEvent event = new CacheGetAllEvent(this, System.currentTimeMillis() - t, keys, result);
+        notify(result, event);
         return result;
     }
 
@@ -133,7 +149,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
     }
 
     static <K, V> V computeIfAbsentImpl(K key, Function<K, V> loader, boolean cacheNullWhenLoaderReturnNull,
-                                               long expireAfterWrite, TimeUnit timeUnit, Cache<K, V> cache) {
+                                        long expireAfterWrite, TimeUnit timeUnit, Cache<K, V> cache) {
         AbstractCache<K, V> abstractCache = CacheUtil.getAbstractCache(cache);
         CacheLoader<K, V> newLoader = CacheUtil.createProxyLoader(cache, loader, abstractCache::notify);
         CacheGetResult<V> r;
@@ -148,7 +164,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
             return r.getValue();
         } else {
             Consumer<V> cacheUpdater = (loadedValue) -> {
-                if(needUpdate(loadedValue, cacheNullWhenLoaderReturnNull, newLoader)) {
+                if (needUpdate(loadedValue, cacheNullWhenLoaderReturnNull, newLoader)) {
                     if (timeUnit != null) {
                         cache.PUT(key, loadedValue, expireAfterWrite, timeUnit).waitForResult();
                     } else {
@@ -169,7 +185,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         }
     }
 
-    static <K, V> V synchronizedLoad(CacheConfig config, AbstractCache<K,V> abstractCache,
+    static <K, V> V synchronizedLoad(CacheConfig config, AbstractCache<K, V> abstractCache,
                                      K key, Function<K, V> newLoader, Consumer<V> cacheUpdater) {
         ConcurrentHashMap<Object, LoaderLock> loaderMap = abstractCache.initOrGetLoaderMap();
         Object lockKey = buildLoaderLockKey(abstractCache, key);
@@ -209,7 +225,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
                         ll.signal.await();
                     } else {
                         boolean ok = ll.signal.await(timeout.toMillis(), TimeUnit.MILLISECONDS);
-                        if(!ok) {
+                        if (!ok) {
                             logger.info("loader wait timeout:" + timeout);
                             return newLoader.apply(key);
                         }
@@ -237,7 +253,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else if (c instanceof MultiLevelCache) {
             c = ((MultiLevelCache) c).caches()[0];
             return buildLoaderLockKey(c, key);
-        } else if(c instanceof ProxyCache) {
+        } else if (c instanceof ProxyCache) {
             c = ((ProxyCache) c).getTargetCache();
             return buildLoaderLockKey(c, key);
         } else {
@@ -254,10 +270,8 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else {
             result = do_PUT(key, value, expireAfterWrite, timeUnit);
         }
-        result.future().thenRun(() -> {
-            CachePutEvent event = new CachePutEvent(this, System.currentTimeMillis() - t, key, value, result);
-            notify(event);
-        });
+        CachePutEvent event = new CachePutEvent(this, System.currentTimeMillis() - t, key, value, result);
+        notify(result, event);
         return result;
     }
 
@@ -272,10 +286,8 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else {
             result = do_PUT_ALL(map, expireAfterWrite, timeUnit);
         }
-        result.future().thenRun(() -> {
-            CachePutAllEvent event = new CachePutAllEvent(this, System.currentTimeMillis() - t, map, result);
-            notify(event);
-        });
+        CachePutAllEvent event = new CachePutAllEvent(this, System.currentTimeMillis() - t, map, result);
+        notify(result, event);
         return result;
     }
 
@@ -290,10 +302,8 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else {
             result = do_REMOVE(key);
         }
-        result.future().thenRun(() -> {
-            CacheRemoveEvent event = new CacheRemoveEvent(this, System.currentTimeMillis() - t, key, result);
-            notify(event);
-        });
+        CacheRemoveEvent event = new CacheRemoveEvent(this, System.currentTimeMillis() - t, key, result);
+        notify(result, event);
         return result;
     }
 
@@ -308,10 +318,8 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else {
             result = do_REMOVE_ALL(keys);
         }
-        result.future().thenRun(() -> {
-            CacheRemoveAllEvent event = new CacheRemoveAllEvent(this, System.currentTimeMillis() - t, keys, result);
-            notify(event);
-        });
+        CacheRemoveAllEvent event = new CacheRemoveAllEvent(this, System.currentTimeMillis() - t, keys, result);
+        notify(result, event);
         return result;
     }
 
@@ -326,10 +334,8 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         } else {
             result = do_PUT_IF_ABSENT(key, value, expireAfterWrite, timeUnit);
         }
-        result.future().thenRun(() -> {
-            CachePutEvent event = new CachePutEvent(this, System.currentTimeMillis() - t, key, value, result);
-            notify(event);
-        });
+        CachePutEvent event = new CachePutEvent(this, System.currentTimeMillis() - t, key, value, result);
+        notify(result, event);
         return result;
     }
 

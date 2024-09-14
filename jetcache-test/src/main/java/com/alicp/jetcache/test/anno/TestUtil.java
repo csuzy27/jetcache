@@ -21,7 +21,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
- * @author <a href="mailto:areyouok@gmail.com">huangli</a>
+ * @author huangli
  */
 public class TestUtil {
     public static GlobalCacheConfig createGloableConfig() {
@@ -80,7 +80,7 @@ public class TestUtil {
         int waitCount = 0;
         while (deadline - System.nanoTime() > 0) {
             try {
-                Thread.sleep(5);
+                Thread.sleep(1);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

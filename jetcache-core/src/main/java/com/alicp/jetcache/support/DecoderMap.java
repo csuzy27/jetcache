@@ -6,14 +6,16 @@ package com.alicp.jetcache.support;
 import com.alicp.jetcache.anno.SerialPolicy;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * @author <a href="mailto:areyouok@gmail.com">huangli</a>
+ * @author huangli
  */
 public class DecoderMap {
 
     private final ConcurrentHashMap<Integer, AbstractValueDecoder> decoderMap = new ConcurrentHashMap<>();
     private volatile boolean inited = false;
+    private final ReentrantLock reentrantLock = new ReentrantLock();
 
     private static final DecoderMap instance = new DecoderMap();
 
@@ -28,21 +30,28 @@ public class DecoderMap {
         return decoderMap.get(identityNumber);
     }
 
-    public synchronized void register(int identityNumber, AbstractValueDecoder decoder) {
+    public void register(int identityNumber, AbstractValueDecoder decoder) {
         decoderMap.put(identityNumber, decoder);
-        inited = true;
     }
 
-    public synchronized void clear() {
+    public void clear() {
         decoderMap.clear();
-        inited = true;
+    }
+
+    public ReentrantLock getLock() {
+        return reentrantLock;
+    }
+
+    public void setInited(boolean inited) {
+        this.inited = inited;
     }
 
     public void initDefaultDecoder() {
         if (inited) {
             return;
         }
-        synchronized (this) {
+        reentrantLock.lock();
+        try {
             if (inited) {
                 return;
             }
@@ -51,6 +60,8 @@ public class DecoderMap {
             register(SerialPolicy.IDENTITY_NUMBER_KRYO5, Kryo5ValueDecoder.INSTANCE);
             // register(SerialPolicy.IDENTITY_NUMBER_FASTJSON2, Fastjson2ValueDecoder.INSTANCE);
             inited = true;
+        } finally {
+            reentrantLock.unlock();
         }
     }
 

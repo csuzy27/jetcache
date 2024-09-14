@@ -16,7 +16,7 @@ import com.alicp.jetcache.support.CacheNotifyMonitor;
 import java.util.function.Function;
 
 /**
- * @author <a href="mailto:areyouok@gmail.com">huangli</a>
+ * @author huangli
  */
 public class NotifyMonitorInstaller implements CacheMonitorInstaller {
 
@@ -49,7 +49,13 @@ public class NotifyMonitorInstaller implements CacheMonitorInstaller {
             }
         }
 
-        CacheMonitor monitor = new CacheNotifyMonitor(cacheManager, area, quickConfig.getName());
+        CacheMonitor monitor = createMonitor(cacheManager, quickConfig, area);
         cache.config().getMonitors().add(monitor);
     }
+
+    protected CacheMonitor createMonitor(CacheManager cacheManager, QuickConfig quickConfig, String area) {
+        return new CacheNotifyMonitor(cacheManager, area, quickConfig.getName());
+    }
+
+
 }

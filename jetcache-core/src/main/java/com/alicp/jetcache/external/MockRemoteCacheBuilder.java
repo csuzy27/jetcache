@@ -8,12 +8,12 @@ import com.alicp.jetcache.support.CacheMessage;
 /**
  * Created on 2016/10/20.
  *
- * @author <a href="mailto:areyouok@gmail.com">huangli</a>
+ * @author huangli
  */
 public class MockRemoteCacheBuilder<T extends ExternalCacheBuilder<T>> extends ExternalCacheBuilder<T> {
 
-    private static boolean subscribeStart;
-    private static CacheMessage lastPublishMessage;
+    private static volatile boolean subscribeStart;
+    private static volatile CacheMessage lastPublishMessage;
 
     public static class MockRemoteCacheBuilderImpl extends MockRemoteCacheBuilder<MockRemoteCacheBuilderImpl> {
     }

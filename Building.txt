@@ -1,4 +1,4 @@
-0. Unit test in IDE under Windows/macOS
+0. Unit test in IDE under Windows
 ==========================================================
     Run redis in docker:
 
@@ -13,7 +13,7 @@
 1.1 Run redis
     At first we run redis server using Docker, under jetcache directory, run:
 
-    docker-compose up
+    docker compose up
 
     This will run 1 redis server with 2 slaves, 3 sentinels, and 6 redis cluster node (3 masters, 3 slaves).
 
@@ -23,11 +23,11 @@
 
 1.2.b Run tests in macOS
 
-    docker run -it --rm --network host -v $HOME/.m2:/root/.m2 -v `pwd`:/usr/src/mymaven -w /usr/src/mymaven maven:3.6.2-jdk-8 mvn clean test
+    docker run -it --rm --network host -v $HOME/.m2:/root/.m2 -v `pwd`:/usr/src/mymaven -w /usr/src/mymaven maven:3.9-eclipse-temurin-17 mvn clean test
 
 1.2.c Run tests in Windows
 
-    docker run -it --rm --network host -v /c/Users/hl_20/.m2:/root/.m2 -v /c/Users/hl_20/IdeaProjects/jetcache/jetcache:/usr/src/mymaven -w /usr/src/mymaven maven:3.6.2-jdk-8 mvn clean test
+    docker run -it --rm --network host -v /c/Users/hl_20/.m2:/root/.m2 -v /c/Users/hl_20/IdeaProjects/jetcache/jetcache:/usr/src/mymaven -w /usr/src/mymaven maven:3.9-eclipse-temurin-17 mvn clean test
 
     You need change /c/Users/hl_20 and /c/Users/hl_20/IdeaProjects/jetcache/jetcache to your local path.
 
@@ -36,7 +36,7 @@
 ==========================================================
     Use this command to change version in all pom file:
 
-    mvn versions:set -DnewVersion=1.0.0-SNAPSHOT
+    mvn versions:set -DnewVersion=x.x.x-SNAPSHOT -DprocessAllModules=true
 
 3. Building your own version
 ===========================================================

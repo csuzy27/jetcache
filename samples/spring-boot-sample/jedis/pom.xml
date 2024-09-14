@@ -8,13 +8,26 @@
         <groupId>com.alicp.jetcache.samples</groupId>
         <artifactId>samples</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../../samples</relativePath>
     </parent>
     <artifactId>spring-boot-jedis-demo</artifactId>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.alicp.jetcache</groupId>
+                <artifactId>jetcache-bom</artifactId>
+                <version>${jetcache.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>com.alicp.jetcache</groupId>
             <artifactId>jetcache-starter-redis</artifactId>
-            <version>${jetcache.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.springframework.boot</groupId>

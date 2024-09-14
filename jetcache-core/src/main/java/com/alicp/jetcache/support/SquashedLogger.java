@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * @author <a href="mailto:areyouok@gmail.com">huangli</a>
+ * @author huangli
  */
 public class SquashedLogger {
     private static final int DEFAULT_INTERVAL_SECONDS = 10;
@@ -19,12 +19,12 @@ public class SquashedLogger {
     private final Logger logger;
     private final long interval;
 
-    private volatile AtomicLong lastLogTime;
+    private final AtomicLong lastLogTime;
 
     private SquashedLogger(Logger logger, int intervalSeconds) {
         this.logger = logger;
-        this.lastLogTime = new AtomicLong(0);
         this.interval = Duration.ofSeconds(intervalSeconds).toNanos();
+        this.lastLogTime = new AtomicLong(System.nanoTime() - interval);
     }
 
     public static SquashedLogger getLogger(Logger target, int intervalSeconds) {
@@ -42,7 +42,7 @@ public class SquashedLogger {
     private boolean shouldLogEx() {
         long now = System.nanoTime();
         long last = lastLogTime.get();
-        if (Math.abs(now - last) > interval) {
+        if (Math.abs(now - last) >= interval) {
             return lastLogTime.compareAndSet(last, now);
         } else {
             return false;
@@ -61,14 +61,15 @@ public class SquashedLogger {
                 sb.append(msg);
             }
             sb.append(' ');
-            while (e != null) {
+            int i = 0;
+            while (e != null && i++ < 20) {
                 sb.append(e);
                 e = e.getCause();
                 if (e != null) {
                     sb.append("\ncause by ");
                 }
             }
-            logger.error(msg.toString());
+            logger.error(sb.toString());
         }
     }
 }

@@ -6,8 +6,13 @@ jetcache在以下spring/spring-boot版本下通过了测试，如果你只用部
 | 2.5        | 4.0.8.RELEASE~5.1.1.RELEASE | 1.1.9.RELEASE~2.0.5.RELEASE ||
 | 2.6        | 5.0.4.RELEASE~5.2.4.RELEASE | 2.0.0.RELEASE~2.2.5.RELEASE | jetcache-redis依赖jedis3.1.0，spring-data(jedis，boot版本<=2.1.X)依赖jedis2.9.3，不能同时用 |
 | 2.7        | 5.2.4.RELEASE~5.3.23        | 2.2.5.RELEASE~2.7.5         | jetcahe-redis依赖jedis4，spring-data(jedis)依赖jedis3，不能同时用                        |
+| 2.7.4      | 5.2.4.RELEASE~6.0.11        | 2.2.5.RELEASE~3.1.3         | |
 
 # 兼容性改动说明
+## 2.7.4
+* 默认传递依赖spring-boot 3.1.3，spring-framework 6.0.11，slf4j-api 2.x
+* 移除了javax.annotation:javax.annotation-api这个依赖，如果你用了@PostConstruct等注解，可能需要自己加上这个依赖
+
 ## 2.7.2
 * 更新了redisson的编码方式，和2.7.1不兼容
 
@@ -20,7 +25,7 @@ jetcache在以下spring/spring-boot版本下通过了测试，如果你只用部
 * lettuce连接redis cluster需要在yml里面指定mode=cluster
 * 默认的key convertor改成了"fastjson2"，fastjson2和fastjson可以并存，fastjson（非fastjson2）/kryo/kryo5/mvel在maven中都改为optional，如果使用了需要用户手工声明依赖
 * 如果没有使用spring boot，应该增加```@Import(JetCacheBaseBeans.class)```，同时删除原来定义的configProvider bean，具体例子可以看最新文档
-* GlobalCacheConfig.areaInCacheName默认值改为false，以前所有的代码案例都显式的写了areaInCacheName=false，不会有人没加这一行吧
+* GlobalCacheConfig.areaInCacheName默认值改为false(但是有bug，默认值可能还是true)，areaInCacheName=false这个还得加上
 
 ## 2.6.0
 * GET/GET_ALL方法不再触发自动刷新（大写的方法只简单访问缓存， 小写的方法才能触发这些附加功能）

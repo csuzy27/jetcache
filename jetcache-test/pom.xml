@@ -3,7 +3,8 @@
     <parent>
         <artifactId>jetcache-parent</artifactId>
         <groupId>com.alicp.jetcache</groupId>
-        <version>2.7.4-SNAPSHOT</version>
+        <version>2.7.8-SNAPSHOT</version>
+        <relativePath>../jetcache-parent</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -17,6 +18,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -76,6 +84,7 @@
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
         </dependency>
 
         <dependency>
@@ -89,7 +98,8 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>4.6.1</version>
+            <!--5.x byte code can't run under java 8-->
+            <version>4.11.0</version>
         </dependency>
         <dependency>
             <groupId>net.bytebuddy</groupId>
@@ -158,7 +168,14 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.8</version>
                 <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
                     <execution>
                         <id>report-aggregate</id>
                         <phase>verify</phase>
